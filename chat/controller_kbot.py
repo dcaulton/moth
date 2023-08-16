@@ -17,10 +17,14 @@ class KbotController():
             self.kb_path = "data/triboo/Triboo_knowledgebase.csv"
             self.emb_title_path = 'embeddings/triboo/embeddings_title.npy'
             self.emb_content_path = 'embeddings/triboo/embeddings_Content.npy'
+            self.embeddings_title_colname = 'title'
+            self.embeddings_content_colname = 'Content'
         elif self.project == 'qelp':
             self.kb_path = "data/qelp/dataset_qelp.csv"
             self.emb_title_path = 'embeddings/qelp/embeddings_title.npy'
             self.emb_content_path = 'embeddings/qelp/embeddings_Content.npy'
+            self.embeddings_title_colname = 'topic_name'
+            self.embeddings_content_colname = 'steps_text'
         else:
             raise Exception('cannot find knowledgebase files for project ' + self.project)
         logger.info(f'kb path: {self.kb_path}')
@@ -47,6 +51,7 @@ class KbotController():
         df_knowledge.dropna(inplace=True)
         df_knowledge.reset_index(level=0, inplace=True)
         self.df_knowledge = df_knowledge
+        logger.info(f'df knowledge headings are {list(self.df_knowledge)}')
 
     def get_last_modified_filename(self, kb_path, project):
         klm = int(os.path.getmtime(kb_path))
@@ -62,8 +67,10 @@ class KbotController():
         if self.knowledgebase_has_changed():
             print("knowledgebase has changed, updating embeddings")
             #Create embeddings for each column we want to compare our text with
-            embeddings_title = self.build_embedding_list(self.df_knowledge['title'])
-            embeddings_Content = self.build_embedding_list(self.df_knowledge['Content'])
+            embeddings_title = self.build_embedding_list(
+                self.df_knowledge[self.embeddings_title_colname])
+            embeddings_Content = self.build_embedding_list(
+                self.df_knowledge[self.embeddings_content_colname])
             np.save(self.emb_title_path, np.array(embeddings_title))
             np.save(self.emb_content_path, np.array(embeddings_Content))
             klm_filename = self.get_last_modified_filename(self.kb_path, self.project)
@@ -131,7 +138,12 @@ class KbotController():
         df_outliers = self.find_outliers_IQR(self.df_knowledge['cos_sim_log']).to_frame().reset_index(level=0, inplace=False)
         
         #Create df of potential answers
-        df_answers = self.df_knowledge[['index','title','Content','cos_sim_max','cos_sim_log',]] \
+        df_answers = self.df_knowledge[[
+                'index',
+                self.embeddings_title_colname,
+                self.embeddings_content_colname,
+                'cos_sim_max',
+                'cos_sim_log',]] \
             .sort_values(by=['cos_sim_max'], ascending = False) \
             .head(len(df_outliers['index']))
         

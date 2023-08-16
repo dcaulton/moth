@@ -106,32 +106,31 @@ class AskController():
 
         self.save_conversation_data(transcript)
 
-#        logger.info(f'CONVERSATION SUMMARY: {self.conversation_summary}')
+        logger.info(f'CONVERSATION SUMMARY: {self.conversation_summary}')
         logger.info(f'Cost: ${self.global_cost[0]}')
 
         return {
             'response_text': self.data,
         }
 
+
+
     def ask_qelp(self):
-        pass
-
-      # TODO fetch previous conversation
-
-
-#      the_resp = self.same_context('how do i set up a leaderboard','can it be disabled?')
-#      print('same context resp is '+the_resp)
-#      the_resp = self.summarise_question("how to change the user name of my student which is already set up in triboo")
-#      print('summarize question resp is '+the_resp)
+        self.reset_ask_session_variables()
+        self.input_txt = self.request_data.get('input_text')
+        self.check_for_changed_context()
+        self.chat_data['conversation_summary'] = self.gpt_controller.summarise_question(self.question_summary, self.global_cost) 
+        df_answers = self.kbot_controller.K_BOT(self.chat_data['conversation_summary'])
 
 
 
 
-#    new_hist = copy.deepcopy(chat_data.get('chat_history'))
-#    new_hist.append(' - and then BOOM')
-#    new_cs = chat_data.get('conversation_summary')
-#    new_cs += ' summmery eve'
-#    chat_data['chat_history'] = new_hist
-#    chat_data['conversation_summary'] = new_cs
 
+
+
+
+
+        return {
+            'response_text': "I have no idea, friend",
+        }
 
