@@ -1,0 +1,15 @@
+django
+djangorestframework
+celery
+daphne
+whitenoise
+pip-chill
+# from the jupyter notebook
+numpy
+pandas
+seaborn
+openai
+scikit-learn
+sentence-transformers 
+ipdb
+redis
