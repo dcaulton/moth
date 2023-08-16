@@ -78,8 +78,7 @@ class AskController():
         self.chat_data['conversation_summary'] = self.gpt_controller.summarise_question(self.question_summary, self.global_cost) 
 
         #Search and return relevant docs from the knowledge base
-        embeddings_title, embeddings_Content = self.kbot_controller.get_embeddings_title_and_content()
-        df_answers = self.kbot_controller.K_BOT(self.chat_data['conversation_summary'], embeddings_title, embeddings_Content)
+        df_answers = self.kbot_controller.K_BOT(self.chat_data['conversation_summary'])
 
         #Convert relevant knowledge items into a 'table' to be included as context for the prompt
         self.knowledge = 'knowledge ID\tTitle\tContent'

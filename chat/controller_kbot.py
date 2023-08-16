@@ -1,9 +1,12 @@
+import logging
 import os
 from pathlib import Path
 
 import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
+
+logger = logging.getLogger(__name__)
 
 class KbotController():
     def __init__(self, project):
@@ -20,6 +23,9 @@ class KbotController():
             self.emb_content_path = 'embeddings/qelp/embeddings_Content.npy'
         else:
             raise Exception('cannot find knowledgebase files for project ' + self.project)
+        logger.info(f'kb path: {self.kb_path}')
+        logger.info(f'emb title path: {self.emb_title_path}')
+        logger.info(f'emb content path: {self.emb_content_path}')
 
 #    def call_all(self, query_string):
 #        self.df_knowledge = self.get_knowledge_base_data()
@@ -40,7 +46,7 @@ class KbotController():
         df_knowledge = df_knowledge.fillna('none')
         df_knowledge.dropna(inplace=True)
         df_knowledge.reset_index(level=0, inplace=True)
-        return df_knowledge
+        self.df_knowledge = df_knowledge
 
     def get_last_modified_filename(self, kb_path, project):
         klm = int(os.path.getmtime(kb_path))
@@ -49,6 +55,8 @@ class KbotController():
         return klm_fullpath
 
     def get_embeddings_title_and_content(self):
+        if not self.df_knowledge:
+            self.get_knowledge_base_data()
         embeddings_title = None
         embeddings_Content = None
         if self.knowledgebase_has_changed():
@@ -101,9 +109,8 @@ class KbotController():
 
        return outliers
 
-    def K_BOT(self, input_question, embeddings_title, embeddings_Content):
-        if not self.df_knowledge:
-            self.df_knowledge = self.get_knowledge_base_data()
+    def K_BOT(self, input_question):
+        embeddings_title, embeddings_Content = self.get_embeddings_title_and_content()
 
         pd.set_option('display.max_colwidth', 5000)
 

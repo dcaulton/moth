@@ -1,7 +1,10 @@
+import logging
 import os
 import inspect
 
 import openai
+
+logger = logging.getLogger(__name__)
 
 # TODO this is going to need to work with async programming, and maybe celery
 #  chatGPT WILL time out on us some times, need to handle these kinds of conditions
@@ -26,6 +29,7 @@ class GptController():
                   #{"role": "assistant", "content" :"if [yes] say '0'/nif [no] say '1'"},             
                   ]
       
+      logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
         model="gpt-4", 
         temperature = 0.0,
@@ -35,7 +39,8 @@ class GptController():
         presence_penalty=0.5,
         #stop=["."],
         messages = messages
-                    )
+      )
+      logger.info('openai call complete')
       
       cost = completion.usage
       cost["function"] = inspect.currentframe().f_code.co_name
@@ -57,6 +62,7 @@ class GptController():
                   {"role": "assistant", "content" :"my search query"}
                     ]
       
+      logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
         model="gpt-4", 
         temperature = 0.1,
@@ -66,7 +72,8 @@ class GptController():
         presence_penalty  = 0.0,
         #stop=["."],
         messages = messages
-                    )
+      )
+      logger.info('openai call complete')
       cost = completion.usage
       cost["function"] = inspect.currentframe().f_code.co_name
       print(cost)
@@ -86,6 +93,7 @@ class GptController():
                   
                  ]
       
+      logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
         model="gpt-4", 
         temperature = 0.4,
@@ -95,7 +103,8 @@ class GptController():
         presence_penalty=0.5,
         #stop=["."],
         messages = messages
-                    )
+      )
+      logger.info('openai call complete')
       in_cost = (completion.usage['prompt_tokens'] * 0.03)/1000
       out_cost = (completion.usage['completion_tokens'] * 0.06)/1000
       # test that this works, if global_cost is passed by value it won't
@@ -113,6 +122,7 @@ class GptController():
                   {"role": "assistant", "content" :"here are some suggestions, you can find more info here [knowledge ID]"}
                   ]
       
+      logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k", 
         temperature = 0.7,
@@ -122,7 +132,8 @@ class GptController():
         presence_penalty=0.5,
         #stop=["."],
         messages = messages
-                    )
+      )
+      logger.info('openai call complete')
       cost = completion.usage
       cost["function"] = inspect.currentframe().f_code.co_name
       print(cost) 
