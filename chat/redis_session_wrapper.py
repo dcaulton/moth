@@ -38,11 +38,12 @@ class RedisSessionWrapper():
                 ret_dict[key] = x
         return ret_dict
 
-    def create_new_session(self):
+    def create_new_session(self, project):
         session_key = SESSION_KEY_PREFIX + str(uuid.uuid4())
         session_data = {
             'chat_history': [],
-            'conversation_summary': ''
+            'conversation_summary': '',
+            'project': project,
         }
         self.save_obj_to_redis(session_key, session_data)
         return session_key, session_data

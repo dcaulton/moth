@@ -32,6 +32,7 @@ class AskController():
         self.knowledge = ''
         self.data = ''
         self.input_txt = ''
+        self.list_ids = ''
 
     def check_for_changed_context(self):
         #Check to see if context changed before submitting the question to the CosSim KB function
@@ -61,8 +62,6 @@ class AskController():
         logger.info(f"I SEARCHED FOR DOCUMENTS RELATED TO: {self.chat_data['conversation_summary']}")
         logger.info(f'I REPLIED: {self.data}')
         conversation_summary = self.gpt_controller.summarise_history_3_5(transcript, self.global_cost)
-        self.chat_data['conversation_summary2'] = self.gpt_controller.summarise_question(self.question_summary, self.global_cost) 
-
 
 
     def ask_triboo(self):
@@ -83,6 +82,7 @@ class AskController():
         #Convert relevant knowledge items into a 'table' to be included as context for the prompt
         self.knowledge = 'knowledge ID\tTitle\tContent'
         for index, row in df_answers.iterrows():
+            logger.info('BENNY one answer row is ', row)
             self.knowledge = self.knowledge + '\n' + str(row['index']) + '\t'  + row['title'] + '\t'  + row['Content']
 
         #Come up with a response to the question
@@ -120,17 +120,37 @@ class AskController():
         self.input_txt = self.request_data.get('input_text')
         self.check_for_changed_context()
         self.chat_data['conversation_summary'] = self.gpt_controller.summarise_question(self.question_summary, self.global_cost) 
-        df_answers = self.kbot_controller.K_BOT(self.chat_data['conversation_summary'])
+        df_answers = self.kbot_controller.K_BOT(self.chat_data['conversation_summary'], self.list_ids)
+        #Convert relevant knowledge items into a 'table' to be included as context for the prompt
+        self.knowledge = 'ID\tmanufacturer\toperating system\tproduct\tanswer\tsteps'
+        for index, row in df_answers.iterrows():
+            logger.info('TOMMY one answer row is ', row)
+            self.knowledge = self.knowledge + '\n' +  row['id'] + '\t'  + row['manufacturer_label']+ '\t'  + row['os_name']+ '\t' + row['product_name']+ '\t'  + row['topic_name']+ '\t'  + row['steps_text']
 
+        # Identify relevant knowledge IDs
+        self.list_ids = self.gpt_controller.knowledge_ids(self.chat_data['conversation_summary'], self.knowledge, self.conversation_summary, self.global_cost)
 
+        #Come up with a response to the question
+        self.data = self.gpt_controller.run_prompt_3_5(self.chat_data['conversation_summary'], self.knowledge, self.conversation_summary, self.global_cost).split('\n')
+        while("" in self.data):
+            self.data.remove("")
+        self.data = ''.join(self.data)
 
+        #Format the list as text to feed back to GPT summary function
+        x=0
+        transcript =''
+        for i in self.history:
+            text = self.history[x]['role'] + '\t' + self.history[x]['content']
+            transcript = transcript + text +'\n'
+            x=x+1
+        self.chat_data['chat_history'] = self.history
 
+        self.save_conversation_data(transcript)
 
-
-
-
+        logger.info(f'CONVERSATION SUMMARY: {self.conversation_summary}')
+        logger.info(f'Cost: ${self.global_cost[0]}')
 
         return {
-            'response_text': "I have no idea, friend",
+            'response_text': self.data,
+            'ids': self.list_ids,
         }
-

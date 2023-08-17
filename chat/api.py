@@ -34,10 +34,13 @@ class ChatAskViewSet(viewsets.ViewSet):
     if session_key and not r.session_exists(session_key):
         return Response(f'session not found: {session_key}', status=500)
     if not session_key:
-        session_key, chat_data = r.create_new_session()
+        session_key, chat_data = r.create_new_session(project)
         # give this 'transaction' time to process?
     else:
         chat_data = r.get_data_from_session(session_key)
+
+    if chat_data.get('project') != project:
+        return Response('cannot change projects within a session', status=500)
 
     ac = AskController(chat_data, request_data, session_key, project)
     answer_data = ac.ask()

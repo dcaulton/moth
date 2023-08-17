@@ -13,6 +13,7 @@ class KbotController():
         self.emb_model = None
         self.df_knowledge = {}
         self.project = project
+        self.language_name = 'en_UK'
         if self.project == 'triboo':
             self.kb_path = "data/triboo/Triboo_knowledgebase.csv"
             self.emb_title_path = 'embeddings/triboo/embeddings_title.npy'
@@ -116,7 +117,7 @@ class KbotController():
 
        return outliers
 
-    def K_BOT(self, input_question):
+    def K_BOT(self, input_question, list_ids=''):
         embeddings_title, embeddings_Content = self.get_embeddings_title_and_content()
 
         pd.set_option('display.max_colwidth', 5000)
@@ -138,13 +139,27 @@ class KbotController():
         df_outliers = self.find_outliers_IQR(self.df_knowledge['cos_sim_log']).to_frame().reset_index(level=0, inplace=False)
         
         #Create df of potential answers
-        df_answers = self.df_knowledge[[
-                'index',
-                self.embeddings_title_colname,
-                self.embeddings_content_colname,
-                'cos_sim_max',
-                'cos_sim_log',]] \
-            .sort_values(by=['cos_sim_max'], ascending = False) \
-            .head(len(df_outliers['index']))
+        df_answers = {}
+        if self.project == 'triboo': 
+            df_answers = self.df_knowledge[[
+                    'index',
+                    self.embeddings_title_colname,
+                    self.embeddings_content_colname,
+                    'cos_sim_max',
+                    'cos_sim_log',]] \
+                .sort_values(by=['cos_sim_max'], ascending = False) \
+                .head(len(df_outliers['index']))
+        elif self.project == 'qelp': 
+            #Create df of potential answers
+            df_answers = self.df_knowledge[['id','language_name','manufacturer_label','os_name','product_name','topic_name','steps_text','cos_sim_max','cos_sim_log',]].sort_values(by=['cos_sim_max'], ascending = False).head(len(df_outliers['index']))
+            df_answers = df_answers[df_answers['language_name'] == self.language_name]
+            df_answers['steps_text'] = df_answers['steps_text'].str.replace('<[^<]+?>', '')
+            df_answers['steps_text'] = df_answers['steps_text'].str.replace("[", "")
+            df_answers['steps_text'] = df_answers['steps_text'].str.replace("]", "")
+            df_answers['steps_text'] = df_answers['steps_text'].str.replace("*", "")
+            #search_results = []
+            #If GPT has compiled a list of relevant IDs (after initial user question) filter using this list, save tokens
+            if len(list_ids.split(',')) > 0:
+                df_answers[df_answers.id.isin(list_ids.split(','))]
         
         return df_answers

@@ -4,7 +4,7 @@ RUN apt-get -y update && apt-get -y install \
   build-essential 
 
 FROM step-base as gr1
-ARG grpath=/frodo
+ARG grpath=/moth
 EXPOSE 8002
 RUN useradd -m -s /bin/bash -d /home/python python
 RUN rm -Rf /mnt/www

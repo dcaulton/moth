@@ -144,3 +144,39 @@ class GptController():
       global_cost[0] = in_cost + out_cost
 
       return ''.join(completion.choices[0].message.content)
+
+    # This is the function which identifies the relevant item IDs
+    def knowledge_ids(self, prompt, knowledge, summary, global_cost):
+      max_knowledge_tokens = 10000
+      print('dimmy', knowledge[:max_knowledge_tokens])
+      print('dammy', prompt)
+      messages = [{"role": "system", "content" :"you are friendly and helpful technical support, this is your knowledgebase\n"  
+                   + knowledge[:max_knowledge_tokens]},
+                  {"role": "user", "content" : "list the ids from the knowledgebase which answer this question or return an empty list if there are none\n" 
+                   +prompt
+                   +"\nreturn ids as a comma delimited list"}
+                  ]
+      #
+      logger.info('calling openai for chat completion')
+      completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-16k", #3.5-turbo-16k
+        temperature = 0,
+        max_tokens=5000,
+        top_p=1.0,
+        frequency_penalty=0,
+        presence_penalty=0,
+        #stop=["."],
+        messages = messages
+      )
+      logger.info('openai call complete')
+      #Extract info for tokens used
+      token_usage = completion.usage
+      token_usage["function"] = inspect.currentframe().f_code.co_name
+      #Display token info (or not)
+      #print(token_usage) 
+
+      in_cost = (completion.usage['prompt_tokens'] * 0.003)/1000
+      out_cost = (completion.usage['completion_tokens'] * 0.004)/1000
+      global_cost[0] = in_cost + out_cost
+
+      return ''.join(completion.choices[0].message.content)
