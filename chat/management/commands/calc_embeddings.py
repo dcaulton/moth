@@ -3,8 +3,8 @@ from django.core.management.base import BaseCommand
 
 from chat.controller_kbot import KbotController
 
-
 logger = logging.getLogger(__name__)
+
 
 
 class Command(BaseCommand):
@@ -23,5 +23,4 @@ class Command(BaseCommand):
         project = options["project"]
         kc = KbotController(project, logger=logger)
         emb_title, emb_content = kc.get_embeddings_title_and_content()
-        import ipdb; ipdb.set_trace()
-
+        print(f'embeddings are now available, with {len(emb_title)} records present')

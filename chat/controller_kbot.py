@@ -7,8 +7,10 @@ import numpy as np
 from sentence_transformers import SentenceTransformer, util
 
 
+logger = logging.getLogger(__name__)
+
 class KbotController():
-    def __init__(self, project):
+    def __init__(self, project, **kwargs):
         self.emb_model = None
         self.df_knowledge = {}
         self.project = project
@@ -23,6 +25,8 @@ class KbotController():
             raise Exception('cannot find knowledgebase file for project ' + self.project)
         self.emb_title_path = os.path.join('embeddings', self.project, 'embeddings_title.npy')
         self.emb_content_path = os.path.join('embeddings', self.project, 'embeddings_Content.npy')
+        if 'logger' in kwargs:
+            logger = kwargs['logger']
         logger.info(f'kb path: {self.kb_path}')
         logger.info(f'emb title path: {self.emb_title_path}')
         logger.info(f'emb content path: {self.emb_content_path}')
