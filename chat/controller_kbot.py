@@ -7,10 +7,12 @@ import numpy as np
 from sentence_transformers import SentenceTransformer, util
 
 
+global logger
 logger = logging.getLogger(__name__)
 
 class KbotController():
     def __init__(self, project, **kwargs):
+        global logger
         self.emb_model = None
         self.df_knowledge = {}
         self.project = project
