@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
 
-logger = logging.getLogger(__name__)
 
 class KbotController():
     def __init__(self, project):
@@ -14,20 +13,16 @@ class KbotController():
         self.df_knowledge = {}
         self.project = project
         self.language_name = 'en_UK'
-        if self.project == 'triboo':
-            self.kb_path = "data/triboo/Triboo_knowledgebase.csv"
-            self.emb_title_path = 'embeddings/triboo/embeddings_title.npy'
-            self.emb_content_path = 'embeddings/triboo/embeddings_Content.npy'
-            self.embeddings_title_colname = 'title'
-            self.embeddings_content_colname = 'Content'
-        elif self.project == 'qelp':
-            self.kb_path = "data/qelp/dataset_qelp.csv"
-            self.emb_title_path = 'embeddings/qelp/embeddings_title.npy'
-            self.emb_content_path = 'embeddings/qelp/embeddings_Content.npy'
-            self.embeddings_title_colname = 'topic_name'
-            self.embeddings_content_colname = 'steps_text'
+        self.embeddings_title_colname = 'topic_name'
+        self.embeddings_content_colname = 'steps_text'
+        if self.project == 'phone_support':
+            self.kb_path = "data/dataset_qelp_phone_support.csv"
+        elif self.project == 'tmobile':
+            self.kb_path = "data/dataset_qelp_tmobile.csv"
         else:
-            raise Exception('cannot find knowledgebase files for project ' + self.project)
+            raise Exception('cannot find knowledgebase file for project ' + self.project)
+        self.emb_title_path = os.path.join('embeddings', self.project, 'embeddings_title.npy')
+        self.emb_content_path = os.path.join('embeddings', self.project, 'embeddings_Content.npy')
         logger.info(f'kb path: {self.kb_path}')
         logger.info(f'emb title path: {self.emb_title_path}')
         logger.info(f'emb content path: {self.emb_content_path}')
@@ -140,26 +135,17 @@ class KbotController():
         
         #Create df of potential answers
         df_answers = {}
-        if self.project == 'triboo': 
-            df_answers = self.df_knowledge[[
-                    'index',
-                    self.embeddings_title_colname,
-                    self.embeddings_content_colname,
-                    'cos_sim_max',
-                    'cos_sim_log',]] \
-                .sort_values(by=['cos_sim_max'], ascending = False) \
-                .head(len(df_outliers['index']))
-        elif self.project == 'qelp': 
-            #Create df of potential answers
-            df_answers = self.df_knowledge[['id','language_name','manufacturer_label','os_name','product_name','topic_name','steps_text','cos_sim_max','cos_sim_log',]].sort_values(by=['cos_sim_max'], ascending = False).head(len(df_outliers['index']))
-            df_answers = df_answers[df_answers['language_name'] == self.language_name]
-            df_answers['steps_text'] = df_answers['steps_text'].str.replace('<[^<]+?>', '')
-            df_answers['steps_text'] = df_answers['steps_text'].str.replace("[", "")
-            df_answers['steps_text'] = df_answers['steps_text'].str.replace("]", "")
-            df_answers['steps_text'] = df_answers['steps_text'].str.replace("*", "")
-            #search_results = []
-            #If GPT has compiled a list of relevant IDs (after initial user question) filter using this list, save tokens
-            if len(list_ids.split(',')) > 0:
-                df_answers[df_answers.id.isin(list_ids.split(','))]
+
+        #Create df of potential answers
+        df_answers = self.df_knowledge[['id','language_name','manufacturer_label','os_name','product_name','topic_name','steps_text','cos_sim_max','cos_sim_log',]].sort_values(by=['cos_sim_max'], ascending = False).head(len(df_outliers['index']))
+        df_answers = df_answers[df_answers['language_name'] == self.language_name]
+        df_answers['steps_text'] = df_answers['steps_text'].str.replace('<[^<]+?>', '')
+        df_answers['steps_text'] = df_answers['steps_text'].str.replace("[", "")
+        df_answers['steps_text'] = df_answers['steps_text'].str.replace("]", "")
+        df_answers['steps_text'] = df_answers['steps_text'].str.replace("*", "")
+        #search_results = []
+        #If GPT has compiled a list of relevant IDs (after initial user question) filter using this list, save tokens
+        if len(list_ids.split(',')) > 0:
+            df_answers[df_answers.id.isin(list_ids.split(','))]
         
         return df_answers

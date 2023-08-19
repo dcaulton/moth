@@ -18,16 +18,10 @@ class GptController():
             openai.api_key = the_key.strip()
 
     def same_context(self, previous_answer, question, global_cost):
-      #prompt_tokens = len(prompt)
-      #knowledge_tokens = len(knowledge)
-      #summary_tokens = len(summary)
-      #max_knowledge_tokens = 10000
-
-      messages = [{"role": "system", "content" : previous_answer + "\n\nIs the following text a continuation of the previous conversation, [yes] or [no]\n"},
-
-                  {"role": "user", "content" : question}
-                  #{"role": "assistant", "content" :"if [yes] say '0'/nif [no] say '1'"},             
-                  ]
+      messages = [
+        {"role": "system", "content" : previous_answer + "\n\nIs the following text a continuation of the previous conversation, [yes] or [no]\n"},
+        {"role": "user", "content" : question}
+      ]
       
       logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
@@ -37,30 +31,28 @@ class GptController():
         top_p=1.0,
         frequency_penalty=0.5,
         presence_penalty=0.5,
-        #stop=["."],
         messages = messages
       )
       logger.info('openai call complete')
       
       cost = completion.usage
       cost["function"] = inspect.currentframe().f_code.co_name
-      print(cost)
+      logger.info(cost)
 
       in_cost = (completion.usage['prompt_tokens'] * 0.03)/1000
       out_cost = (completion.usage['completion_tokens'] * 0.06)/1000
-      # test that this works, if global_cost is passed by value it won't
-      global_cost[0] = in_cost + out_cost
+      global_cost[0] += (in_cost + out_cost)
 
       return ''.join(completion.choices[0].message.content)
 
     # Function to summarise the user sequence into a concise string of key words for searching the KB
     def summarise_question(self, questions, global_cost):
 
-      messages = [{"role": "system", "content" : "Return search criteria"},
-                  {"role": "user", "content" : "convert the text into one concise search criteria which would work well in a search engine\n" 
-                   + questions},
-                  {"role": "assistant", "content" :"my search query"}
-                    ]
+      messages = [
+          {"role": "system", "content" : "Return search criteria"},
+          {"role": "user", "content" : "convert the text into one concise search criteria which would work well in a search engine\n" + questions},
+          {"role": "assistant", "content" :"my search query"}
+      ]
       
       logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
@@ -70,18 +62,17 @@ class GptController():
         top_p=1,
         frequency_penalty = 1.5,
         presence_penalty  = 0.0,
-        #stop=["."],
         messages = messages
       )
       logger.info('openai call complete')
       cost = completion.usage
       cost["function"] = inspect.currentframe().f_code.co_name
-      print(cost)
+      logger.info(cost)
 
       in_cost = (completion.usage['prompt_tokens'] * 0.03)/1000
       out_cost = (completion.usage['completion_tokens'] * 0.06)/1000
       # test that this works, if global_cost is passed by value it won't
-      global_cost[0] = in_cost + out_cost
+      global_cost[0] += (in_cost + out_cost)
 
       return ''.join(completion.choices[0].message.content)
 
@@ -101,82 +92,79 @@ class GptController():
         top_p=1.0,
         frequency_penalty=2,
         presence_penalty=0.5,
-        #stop=["."],
         messages = messages
       )
       logger.info('openai call complete')
       in_cost = (completion.usage['prompt_tokens'] * 0.03)/1000
       out_cost = (completion.usage['completion_tokens'] * 0.06)/1000
       # test that this works, if global_cost is passed by value it won't
-      global_cost[0] = in_cost + out_cost
+      global_cost[0] += (in_cost + out_cost)
 
       return ''.join(completion.choices[0].message.content)
 
     # This is the function which produces a response to the users question
     def run_prompt_3_5(self, prompt,knowledge,summary, global_cost):
       max_knowledge_tokens = 10000
-      messages = [{"role": "system", "content" :"use this information\n"  + knowledge[:max_knowledge_tokens]
-                                               + "\n\nto continue this conversation\n" 
-                                               + summary},
-                  {"role": "user", "content" : "answer the following question\nreference your answers with the relevant knowledge ID\nask questions to avoid ambiguity\n\nWhen using Triboo " +prompt},
-                  {"role": "assistant", "content" :"here are some suggestions, you can find more info here [knowledge ID]"}
-                  ]
-      
+      messages = [{"role": "system", "content" :"you are friendly and helpful technical support, this is your knowledgebase\n"  
+                   + knowledge[:max_knowledge_tokens]
+                   + "\nuse this knowledgebase to ask funelling questions until only one answer remains"},
+                  {"role": "user", "content" : "decide which single knowledgebase topic answers the question\n" 
+                   +prompt}
+      ]
+      #list the ids from the knowledgebase which might answer this question\nreturn ids as a comma delimited list
       logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-16k", 
+        model="gpt-4", #3.5-turbo-16k
         temperature = 0.7,
         max_tokens=5000,
         top_p=1.0,
         frequency_penalty=0.9,
         presence_penalty=0.5,
-        #stop=["."],
         messages = messages
       )
       logger.info('openai call complete')
-      cost = completion.usage
-      cost["function"] = inspect.currentframe().f_code.co_name
-      print(cost) 
+
+      token_usage = completion.usage
+      token_usage["function"] = inspect.currentframe().f_code.co_name
+      logger.info(token_usage)
 
       in_cost = (completion.usage['prompt_tokens'] * 0.003)/1000
       out_cost = (completion.usage['completion_tokens'] * 0.004)/1000
-      # test that this works, if global_cost is passed by value it won't
-      global_cost[0] = in_cost + out_cost
+      global_cost[0] += (in_cost + out_cost)
 
       return ''.join(completion.choices[0].message.content)
+
 
     # This is the function which identifies the relevant item IDs
     def knowledge_ids(self, prompt, knowledge, summary, global_cost):
       max_knowledge_tokens = 10000
-      print('dimmy', knowledge[:max_knowledge_tokens])
-      print('dammy', prompt)
-      messages = [{"role": "system", "content" :"you are friendly and helpful technical support, this is your knowledgebase\n"  
-                   + knowledge[:max_knowledge_tokens]},
-                  {"role": "user", "content" : "list the ids from the knowledgebase which answer this question or return an empty list if there are none\n" 
-                   +prompt
-                   +"\nreturn ids as a comma delimited list"}
-                  ]
+      messages = [
+          {"role": "system", "content" :"you are friendly and helpful technical support, this is your knowledgebase\n"  
+          + knowledge[:max_knowledge_tokens]},
+          {"role": "user", "content" : "list the ids from the knowledgebase which answer this question or return an empty list if there are none\n" 
+          +prompt
+          +"\nreturn ids as a comma delimited list"}
+      ]
       #
       logger.info('calling openai for chat completion')
       completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-16k", #3.5-turbo-16k
-        temperature = 0,
-        max_tokens=5000,
-        top_p=1.0,
-        frequency_penalty=0,
-        presence_penalty=0,
-        #stop=["."],
-        messages = messages
+          model="gpt-3.5-turbo-16k", #3.5-turbo-16k
+          temperature = 0,
+          max_tokens=5000,
+          top_p=1.0,
+          frequency_penalty=0,
+          presence_penalty=0,
+          #stop=["."],
+          messages = messages
       )
       logger.info('openai call complete')
-      #Extract info for tokens used
+
       token_usage = completion.usage
       token_usage["function"] = inspect.currentframe().f_code.co_name
-      #Display token info (or not)
-      #print(token_usage) 
+      logger.info(token_usage) 
 
       in_cost = (completion.usage['prompt_tokens'] * 0.003)/1000
       out_cost = (completion.usage['completion_tokens'] * 0.004)/1000
-      global_cost[0] = in_cost + out_cost
+      global_cost[0] += (in_cost + out_cost)
 
       return ''.join(completion.choices[0].message.content)

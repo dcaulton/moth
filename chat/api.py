@@ -13,20 +13,15 @@ from .controller_ask import AskController
 
 logger = logging.getLogger(__name__)
 
-# todo get these from directory structure?
-known_projects = ['triboo', 'qelp']
-
 class ChatAskViewSet(viewsets.ViewSet):
   def create(self, request):
     request_data = request.data
+    input_text = request_data.get('input_text')
     if 'input_text' not in request_data:
         return Response('input_text field needed', status=500)
-    input_text = request_data['input_text']
-    project = 'triboo'
-    if 'project' in request_data:
-        project = request_data['project']
-    if project not in known_projects:
-        return Response('unknown project specified', status=500)
+    project = request_data.get('project')
+    if 'project' not in request_data:
+        return Response('project field needed', status=500)
 
     r = RedisSessionWrapper()
     session_key = request_data.get('session_key')
@@ -50,7 +45,10 @@ class ChatAskViewSet(viewsets.ViewSet):
       'session_key': session_key,
       'response': answer_data,
     }
-    return Response(ret_dict)
+    if 'errors' in ret_dict['response']:
+        return Response(ret_dict, status=500)
+    else:
+        return Response(ret_dict)
 
 
 class ChatResetViewSet(viewsets.ViewSet):
