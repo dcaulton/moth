@@ -1,6 +1,7 @@
 import logging
 import openai
 import inspect
+from traceback import format_exc
 
 from .controller_gpt import GptController
 from .controller_kbot import KbotController
@@ -25,7 +26,7 @@ class AskController():
         self.transcript = ''
         self.knowledge = ''
         self.current_response_text = ''
-        self.input_txt = ''
+        self.input_txt = self.request_data.get('input_text')
         self.list_ids = ''
 
     def ask(self):
@@ -34,15 +35,15 @@ class AskController():
             return {
                 'errors': ['unknown project specified',],
             }
-        response = self.ask_qelp()
-        return response
-#        try:
-#            response = self.ask_qelp()
-#            return response
-#        except Exception as e:
-#            return {
-#                'errors': [str(e)],
-#            }
+        try:
+            response = self.ask_qelp()
+            return response
+        except Exception as e:
+            logger.error(f'error processing request for {self.project}, session {self.session_key} question *{self.input_text}*:')
+            logger.error(format_exc())
+            return {
+                'errors': [str(e)],
+            }
 
     def get_history(self):
         #Check to see if context changed before submitting the question to the CosSim KB function
@@ -93,17 +94,28 @@ class AskController():
 
 
     def ask_qelp(self):
-        self.input_txt = self.request_data.get('input_text')
         self.get_history()
         df_answers = self.kbot_controller.K_BOT(self.chat_data['conversation_summary'], self.list_ids)
         #Convert relevant knowledge items into a 'table' to be included as context for the prompt
-        self.knowledge = 'ID\tmanufacturer\toperating system\tproduct\tanswer\tsteps'
+        self.knowledge = '\t'.join('ID','manufacturer','operating system','product','answer','steps')
         for index, row in df_answers.iterrows():
-            logger.info('TOMMY one answer row is ', row)
-            self.knowledge = self.knowledge + '\n' +  row['id'] + '\t'  + row['manufacturer_label']+ '\t'  + row['os_name']+ '\t' + row['product_name']+ '\t'  + row['topic_name']+ '\t'  + row['steps_text']
+            back_string = '\t'.join(
+                row['id'], 
+                row['manufacturer_label'], 
+                row['os_name'], 
+                row['product_name'], 
+                row['topic_name'], 
+                row['steps_text']
+            )
+            self.knowledge = self.knowledge + '\n' +  back_string
 
         # Identify relevant knowledge IDs
-        self.list_ids = self.gpt_controller.knowledge_ids(self.chat_data['conversation_summary'], self.knowledge, self.conversation_summary, self.global_cost)
+        self.list_ids = self.gpt_controller.knowledge_ids(
+            self.chat_data['conversation_summary'], 
+            self.knowledge, 
+            self.conversation_summary, 
+            self.global_cost
+        )
 
         #Come up with a response to the question
         self.current_response_text = self.gpt_controller.run_prompt_3_5(
